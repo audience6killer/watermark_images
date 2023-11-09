@@ -116,7 +116,7 @@ from image_classes import *
 #         drag_data["y"] = event.y
 
 
-maingui = MainGUI(title='Add Watermark', geometry="640x720", canvas_geometry=[640, 540])
+maingui = MainGUI(title='Add Watermark', geometry=[900, 600], canvas_geometry=[600, 350])
 
 if __name__ == '__main__':
     maingui.mainloop()
