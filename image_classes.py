@@ -1,7 +1,9 @@
 from tkinter import *
 # from tkinter.ttk import *
 from tkinter import filedialog
-from PIL import ImageTk, Image
+import tkinter.messagebox
+from PIL import ImageTk, Image, ImageDraw
+import io
 
 PLACEHOLDER_IMAGE = 'resources/images/placeholder.jpg'
 FONT = ("Arial", 11)
@@ -44,7 +46,8 @@ class MainGUI(Tk):
          grid(row=0, column=1, padx=5, pady=3, ipadx=10))
 
         self.open_logo_button = Button(self.tool_frame, text='Open Logo',
-                                       state=DISABLED, background='white')
+                                       state=DISABLED, background='white',
+                                       command=self.canvas.open_logo)
         self.open_logo_button.grid(row=1, column=0,
                                    pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
@@ -64,7 +67,8 @@ class MainGUI(Tk):
                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
         self.save_image_button = Button(self.tool_frame, text='Save Image',
-                                        background='white', state=DISABLED)
+                                        background='white', state=DISABLED,
+                                        command=self.canvas.save_image)
         self.save_image_button.grid(row=2, column=1,
                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
@@ -81,8 +85,10 @@ class MainGUI(Tk):
     def image_opened_event(self):
         self.open_logo_button['state'] = NORMAL
         self.save_image_button['state'] = NORMAL
-        #self.resize_logo_button['state'] = NORMAL
         self.set_text_button['state'] = NORMAL
+
+    def logo_opened_event(self):
+        self.resize_logo_button['state'] = NORMAL
 
 
 class CanvasGui(Canvas):
@@ -94,8 +100,11 @@ class CanvasGui(Canvas):
         self.img_id = None
         self.logo_id = None
         self.image_tk = None
+        self.logo_tk = None
+        self.drag_data = {"item": None, "x": 0, "y": 0}
 
     def open_image(self):
+        # TODO: manage cancel button
         image_path = filedialog.askopenfilename(
             title='Please select a valid image',
             filetypes=(('All files', '*.*'),
@@ -129,9 +138,80 @@ class CanvasGui(Canvas):
         self.window.update_original_image(original_image)
         self.window.image_opened_event()
 
-    def open_logo(self):
+
+    # TODO: add_text with popup window
+    def add_text(self):
         pass
 
-# class Image(ImageTk.PhotoImage):
-#     def __init__(self):
-#         super().__init__()
+    # TODO: Decide whether or not delete the logo functionality
+    def open_logo(self):
+        logo_path = filedialog.askopenfilename(
+            title='Please select a valid logo',
+            filetypes=(('All files', '*.*'),
+                       ('PNG', '*.png'),
+                       ('JPEG', '*.jpeg'),
+                       ('JPG', '*.jpg'))
+        )
+        logo_img = Image.open(logo_path)
+        # Calculate ratio to fit image in canvas
+        canvas_width = self.winfo_width() - 200
+        canvas_height = self.winfo_height() - 200
+
+        aspect_ratio = logo_img.width / logo_img.height
+        if canvas_width / aspect_ratio <= canvas_height:
+            new_width = canvas_width
+            new_height = canvas_width / aspect_ratio
+        else:
+            new_height = canvas_height
+            new_width = canvas_height * aspect_ratio
+
+        scaled_image = logo_img.resize((int(new_width), int(new_height)))
+
+        self.logo_tk = ImageTk.PhotoImage(scaled_image)
+        self.logo_id = self.create_image((canvas_width - new_width) / 2,
+                                         (canvas_height - new_height) / 2,
+                                         anchor=NW,
+                                         image=self.logo_tk)
+
+        self.tag_bind(self.logo_id, "<ButtonPress-1>", self.start_drag)
+        self.tag_bind(self.logo_id, "<ButtonRelease-1>", self.stop_drag)
+        self.tag_bind(self.logo_id, "<B1-Motion>", self.drag)
+
+    def start_drag(self, event):
+        # Get the item being dragged
+        self.drag_data["item"] = self.find_closest(event.x, event.y)[0]
+        self.drag_data["x"] = event.x
+        self.drag_data["y"] = event.y
+
+    def stop_drag(self, event):
+        self.drag_data["item"] = None
+
+    def drag(self, event):
+        #img_coords = canvas.coords(str(image_id))
+        bbox = self.bbox(self.drag_data['item'])
+        image_width = bbox[2] - bbox[0]
+        image_height = bbox[3] - bbox[1]
+        max_x_pos = self.winfo_width()
+        max_y_pos = self.winfo_height()
+
+        if self.drag_data["item"] and event.x <= max_x_pos and event.y <= max_y_pos:
+            # Calculate the distance moved
+            delta_x = event.x - self.drag_data["x"]
+            delta_y = event.y - self.drag_data["y"]
+
+            # Move the item by the distance moved
+            self.move(self.drag_data["item"], delta_x, delta_y)
+
+            # Update the x and y for the next drag event
+            self.drag_data["x"] = event.x
+            self.drag_data["y"] = event.y
+
+    def save_image(self):
+        ps_data = self.postscript(colormode='color')
+        img = Image.open(io.BytesIO(ps_data.encode("utf-8")))
+        img.save('output/output.png', format='PNG')
+        # TODO: Manage exceptions:
+        # ValueError – If the output format could not be determined from the file name. Use the format option to solve this.
+        # OSError – If the file could not be written. The file may have been created, and may contain partial data.
+        tkinter.messagebox.showinfo("Successful", "Image was saved successfully")
+
