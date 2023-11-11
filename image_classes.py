@@ -45,6 +45,15 @@ class MainGUI(Tk):
         (Label(self.tool_frame, text='Image', background='lightgrey').
          grid(row=0, column=1, padx=5, pady=3, ipadx=10))
 
+        # Tools configuration frame
+        self.tool_config_frame = Frame(self.left_frame, width=180, height=185,
+                                       bg='lightgrey')
+        self.tool_config_frame.grid(row=3, column=0, padx=5, pady=5)
+
+        (Label(self.tool_config_frame, text='Configuration', background='lightgrey').
+         grid(row=0, column=0, padx=5, pady=3, ipadx=10))
+
+        # Tools column
         self.open_logo_button = Button(self.tool_frame, text='Open Logo',
                                        state=DISABLED, background='white',
                                        command=self.canvas.open_logo)
@@ -52,25 +61,44 @@ class MainGUI(Tk):
                                    pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
         self.resize_logo_button = Button(self.tool_frame, text='Resize Logo',
-                                         state=DISABLED, background='white')
+                                         state=DISABLED, background='white',
+                                         command=self.canvas.resize_logo)
         self.resize_logo_button.grid(row=2, column=0,
+                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
+
+        self.delete_logo_button = Button(self.tool_frame, text='Delete Logo',
+                                         state=DISABLED, background='white',
+                                         command=self.canvas.delete_logo)
+        self.delete_logo_button.grid(row=3, column=0,
                                      pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
         self.set_text_button = Button(self.tool_frame, text="Set text",
                                       state=DISABLED, background='white')
-        self.set_text_button.grid(row=3, column=0,
+        self.set_text_button.grid(row=4, column=0,
                                   pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
+
+        # Image column
         self.open_image_button = Button(self.tool_frame, text='Open image',
                                         background='white', command=self.canvas.open_image)
         self.open_image_button.grid(row=1, column=1,
                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
+        self.change_image_button = Button(self.tool_frame, text='Change image',
+                                          background='white', state=DISABLED,
+                                          command=self.canvas.open_image)
+        self.change_image_button.grid(row=2, column=1,
+                                      pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
+
         self.save_image_button = Button(self.tool_frame, text='Save Image',
                                         background='white', state=DISABLED,
                                         command=self.canvas.save_image)
-        self.save_image_button.grid(row=2, column=1,
+        self.save_image_button.grid(row=3, column=1,
                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
+
+
+
+
 
     def update_original_image(self, img: Image):
         subsample_image = img
@@ -85,15 +113,29 @@ class MainGUI(Tk):
     def image_opened_event(self):
         self.open_logo_button['state'] = NORMAL
         self.save_image_button['state'] = NORMAL
-        self.set_text_button['state'] = NORMAL
+        self.change_image_button['state'] = NORMAL
+        #self.set_text_button['state'] = NORMAL
 
     def logo_opened_event(self):
         self.resize_logo_button['state'] = NORMAL
+        self.delete_logo_button['state'] = NORMAL
 
+    def logo_deleted_event(self):
+        self.resize_logo_button['state'] = DISABLED
+        self.delete_logo_button['state'] = DISABLED
+
+    def resize_logo_event(self):
+        self.resize_logo_button['state'] = DISABLED
+        self.delete_logo_button['state'] = DISABLED
+        self.open_logo_button['state'] = DISABLED
+        self.save_image_button['state'] = DISABLED
+        self.change_image_button['state'] = DISABLED
+        self.open_image_button['state'] = DISABLED
 
 class CanvasGui(Canvas):
     def __init__(self, parent, window: MainGUI, geometry):
         super().__init__(parent, width=geometry[0], height=geometry[1], bg='white')
+        self.original_geometry = geometry
         self.grid(row=0, column=0, columnspan=3, pady=10, padx=5)
         self.parent = parent
         self.window = window
@@ -102,9 +144,11 @@ class CanvasGui(Canvas):
         self.image_tk = None
         self.logo_tk = None
         self.drag_data = {"item": None, "x": 0, "y": 0}
+        self.logo_coords = []
+
 
     def open_image(self):
-        # TODO: manage cancel button
+
         image_path = filedialog.askopenfilename(
             title='Please select a valid image',
             filetypes=(('All files', '*.*'),
@@ -112,6 +156,16 @@ class CanvasGui(Canvas):
                        ('JPG', '*.jpg'),
                        ('JPEG', '*.jpeg'))
         )
+        # We first check whether an image has already been opened, if so
+        # we reset the canvas original geometry
+        if self.img_id:
+            self.config(width=self.original_geometry[0], height=self.original_geometry[1])
+            self.update()
+
+        # We check if a file was selected
+        if not image_path:
+            return
+
         original_image = Image.open(image_path)
         # Calculate ratio to fit image in canvas
         canvas_width = self.winfo_width()
@@ -138,12 +192,10 @@ class CanvasGui(Canvas):
         self.window.update_original_image(original_image)
         self.window.image_opened_event()
 
-
     # TODO: add_text with popup window
     def add_text(self):
         pass
 
-    # TODO: Decide whether or not delete the logo functionality
     def open_logo(self):
         logo_path = filedialog.askopenfilename(
             title='Please select a valid logo',
@@ -152,6 +204,10 @@ class CanvasGui(Canvas):
                        ('JPEG', '*.jpeg'),
                        ('JPG', '*.jpg'))
         )
+
+        if not logo_path:
+            return
+
         logo_img = Image.open(logo_path)
         # Calculate ratio to fit image in canvas
         canvas_width = self.winfo_width() - 200
@@ -177,6 +233,8 @@ class CanvasGui(Canvas):
         self.tag_bind(self.logo_id, "<ButtonRelease-1>", self.stop_drag)
         self.tag_bind(self.logo_id, "<B1-Motion>", self.drag)
 
+        self.window.logo_opened_event()
+
     def start_drag(self, event):
         # Get the item being dragged
         self.drag_data["item"] = self.find_closest(event.x, event.y)[0]
@@ -187,7 +245,7 @@ class CanvasGui(Canvas):
         self.drag_data["item"] = None
 
     def drag(self, event):
-        #img_coords = canvas.coords(str(image_id))
+        # img_coords = canvas.coords(str(image_id))
         bbox = self.bbox(self.drag_data['item'])
         image_width = bbox[2] - bbox[0]
         image_height = bbox[3] - bbox[1]
@@ -209,9 +267,31 @@ class CanvasGui(Canvas):
     def save_image(self):
         ps_data = self.postscript(colormode='color')
         img = Image.open(io.BytesIO(ps_data.encode("utf-8")))
-        img.save('output/output.png', format='PNG')
-        # TODO: Manage exceptions:
-        # ValueError – If the output format could not be determined from the file name. Use the format option to solve this.
-        # OSError – If the file could not be written. The file may have been created, and may contain partial data.
-        tkinter.messagebox.showinfo("Successful", "Image was saved successfully")
+        try:
+            img.save('output/output.png', format='PNG')
+        except ValueError or OSError:
+            tkinter.messagebox.showerror(title='Error', message='There was an error saving the image')
+        else:
+            tkinter.messagebox.showinfo("Successful", "Image was saved successfully")
+
+    def delete_logo(self):
+        self.delete(self.logo_id)
+        self.update()
+        self.window.logo_deleted_event()
+
+    def resize_logo(self):
+        bbox = self.bbox(self.logo_id)
+        print(bbox)
+
+        # We create a point in each corner of the image
+        self.create_oval(bbox[0] - 9, bbox[1] - 9,
+                         bbox[0] + 9, bbox[1] + 9,
+                         fill='red')
+        self.create_oval(bbox[2] - 9, bbox[3] - 9,
+                         bbox[2] + 9, bbox[3] + 9,
+                         fill='red')
+
+        self.window.resize_logo_event()
+        # (center_x - radius, center_y - radius, center_x + radius, center_y + radius,
+
 
