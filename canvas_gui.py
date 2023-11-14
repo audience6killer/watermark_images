@@ -13,21 +13,15 @@ class CanvasGui(Canvas):
         self.grid(row=0, column=0, columnspan=3, pady=10, padx=5)
         self.parent = parent
         self.window = window
-        # self.img_id = None
-        # self.logo_id = None
-        # self.image_tk = None
-        # self.logo_tk = None
         self.base_image = None
         self.logo_image = None
         self.drag_data = {"item": None, "x": 0, "y": 0}
-        self.logo_coords = []
         self.upper_corner_coords = ()
         self.lower_corner_coords = ()
         self.upper_corner = None
         self.lower_corner = None
 
     def open_image(self):
-
         image_path = filedialog.askopenfilename(
             title='Please select a valid image',
             filetypes=(('All files', '*.*'),
@@ -65,30 +59,11 @@ class CanvasGui(Canvas):
         if not logo_path:
             return
 
-        logo_img = Image.open(logo_path)
-        # Calculate ratio to fit image in canvas
-        canvas_width = self.winfo_width() - 200
-        canvas_height = self.winfo_height() - 200
-
-        aspect_ratio = logo_img.width / logo_img.height
-        if canvas_width / aspect_ratio <= canvas_height:
-            new_width = canvas_width
-            new_height = canvas_width / aspect_ratio
-        else:
-            new_height = canvas_height
-            new_width = canvas_height * aspect_ratio
-
-        scaled_image = logo_img.resize((int(new_width), int(new_height)))
-
-        self.logo_tk = ImageTk.PhotoImage(scaled_image)
-        self.logo_id = self.create_image((canvas_width - new_width) / 2,
-                                         (canvas_height - new_height) / 2,
-                                         anchor=NW,
-                                         image=self.logo_tk)
+        self.logo_image = PhotoImageWrapper(self, logo_path, True)
 
         self.enable_drag_logo()
-
         self.window.logo_opened_event()
+
 
     def start_drag(self, event):
         # Get the item being dragged
@@ -148,8 +123,8 @@ class CanvasGui(Canvas):
 
             # if self.drag_data['item'] == self.upper_corner:
             #self.logo_tk = self.logo_tk.resize((200, 200), Image.ANTIALIAS)
-            self.itemconfig(self.logo_id, width=200, height=200)
-            self.update()
+            #self.itemconfig(self.logo_id, width=200, height=200)
+            #self.update()
 
             # Update the x and y for the next drag event
             self.drag_data["y"] = event.y
@@ -166,12 +141,12 @@ class CanvasGui(Canvas):
             tkinter.messagebox.showinfo("Successful", "Image was saved successfully")
 
     def delete_logo(self):
-        self.delete(self.logo_id)
+        self.delete(self.logo_image.image_id)
         self.update()
         self.window.logo_deleted_event()
 
     def resize_logo(self):
-        bbox = self.bbox(self.logo_id)
+        bbox = self.bbox(self.logo_image.image_id)
         print(bbox)
 
         point_radius = 9
@@ -197,17 +172,17 @@ class CanvasGui(Canvas):
         pass
 
     def disable_drag_logo(self):
-        self.tag_unbind(self.logo_id, "<ButtonPress-1>")
-        self.tag_unbind(self.logo_id, "<ButtonRelease-1>")
-        self.tag_unbind(self.logo_id, "<B1-Motion>")
+        self.tag_unbind(self.logo_image.image_id, "<ButtonPress-1>")
+        self.tag_unbind(self.logo_image.image_id, "<ButtonRelease-1>")
+        self.tag_unbind(self.logo_image.image_id, "<B1-Motion>")
 
     def disable_corners_drag(self):
         pass
 
     def enable_drag_logo(self):
-        self.tag_bind(self.logo_id, "<ButtonPress-1>", self.start_drag)
-        self.tag_bind(self.logo_id, "<ButtonRelease-1>", self.stop_drag)
-        self.tag_bind(self.logo_id, "<B1-Motion>", self.drag)
+        self.tag_bind(self.logo_image.image_id, "<ButtonPress-1>", self.start_drag)
+        self.tag_bind(self.logo_image.image_id, "<ButtonRelease-1>", self.stop_drag)
+        self.tag_bind(self.logo_image.image_id, "<B1-Motion>", self.drag)
 
     def enable_corners_drag(self):
         self.tag_bind(self.upper_corner, "<ButtonPress-1>", self.start_resize)
@@ -227,6 +202,4 @@ class CanvasGui(Canvas):
     def image_opened_event(self):
         self.window.image_opened_event()
 
-    def logo_opened_event(self):
-        self.window.logo_opened_event()
 
