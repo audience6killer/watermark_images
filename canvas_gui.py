@@ -106,6 +106,7 @@ class CanvasGui(Canvas):
 
     def resize(self, event):
         halo = 50
+        delta = 0
         if (self.drag_data["item"] and
                 halo < event.x <= self.winfo_width() - halo and
                 halo < event.y <= self.winfo_height() - halo):
@@ -115,16 +116,18 @@ class CanvasGui(Canvas):
 
                 # Move the item by the distance moved
                 self.move(self.drag_data["item"], delta_x, delta_x)
-            else:
+                delta = delta_x
+            elif event.y != self.drag_data['y']:
                 delta_y = event.y - self.drag_data["y"]
 
                 # Move the item by the distance moved
                 self.move(self.drag_data["item"], delta_y, delta_y)
+                delta = delta_y
 
             # if self.drag_data['item'] == self.upper_corner:
-            #self.logo_tk = self.logo_tk.resize((200, 200), Image.ANTIALIAS)
-            #self.itemconfig(self.logo_id, width=200, height=200)
-            #self.update()
+            self.logo_image.resize_image(delta)
+
+            self.update()
 
             # Update the x and y for the next drag event
             self.drag_data["y"] = event.y
@@ -157,7 +160,7 @@ class CanvasGui(Canvas):
 
         self.upper_corner = self.create_oval(bbox[0] - point_radius, bbox[1] - point_radius,
                                              bbox[0] + point_radius, bbox[1] + point_radius,
-                                             fill='red')
+                                             fill='blue')
         self.lower_corner = self.create_oval(bbox[2] - point_radius, bbox[3] - point_radius,
                                              bbox[2] + point_radius, bbox[3] + point_radius,
                                              fill='red')
@@ -169,7 +172,12 @@ class CanvasGui(Canvas):
         # (center_x - radius, center_y - radius, center_x + radius, center_y + radius,
 
     def accept_resize(self):
-        pass
+        self.delete(self.upper_corner)
+        self.delete(self.lower_corner)
+
+        self.enable_drag_logo()
+        self.disable_corners_drag()
+        self.window.accept_resize_changes_event()
 
     def disable_drag_logo(self):
         self.tag_unbind(self.logo_image.image_id, "<ButtonPress-1>")
@@ -185,9 +193,9 @@ class CanvasGui(Canvas):
         self.tag_bind(self.logo_image.image_id, "<B1-Motion>", self.drag)
 
     def enable_corners_drag(self):
-        self.tag_bind(self.upper_corner, "<ButtonPress-1>", self.start_resize)
-        self.tag_bind(self.upper_corner, "<ButtonRelease-1>", self.stop_resize)
-        self.tag_bind(self.upper_corner, "<B1-Motion>", self.resize)
+        # self.tag_bind(self.upper_corner, "<ButtonPress-1>", self.start_resize)
+        # self.tag_bind(self.upper_corner, "<ButtonRelease-1>", self.stop_resize)
+        # self.tag_bind(self.upper_corner, "<B1-Motion>", self.resize)
 
         self.tag_bind(self.lower_corner, "<ButtonPress-1>", self.start_resize)
         self.tag_bind(self.lower_corner, "<ButtonRelease-1>", self.stop_resize)

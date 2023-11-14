@@ -41,7 +41,7 @@ class MainGUI(Tk):
          grid(row=0, column=1, padx=5, pady=3, ipadx=10))
 
         # Tools configuration frame
-        self.tool_config_frame = Frame(self.left_frame, width=180, height=20,
+        self.tool_config_frame = Frame(self.left_frame, width=180, height=50,
                                        bg='lightgrey')
         self.tool_config_frame.grid(row=3, column=0, padx=5, pady=5)
 
@@ -91,10 +91,16 @@ class MainGUI(Tk):
                                     pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
 
         # Configuration frame
+        self.configuration_message = Label(self.tool_config_frame,
+                                           text='Please move the red circle to resize\n and press Accept when ready',
+                                           background='lightgrey')
+        self.configuration_message.grid(row=0, column=0, padx=5, pady=3, ipadx=10)
+        self.configuration_message.grid_forget()
+
         self.accept_resize = Button(self.tool_config_frame, text='Accept Resize',
                                     state=NORMAL, background='white',
                                     command=self.canvas.accept_resize)
-        self.accept_resize.grid(row=0, column=0,
+        self.accept_resize.grid(row=1, column=0,
                                 pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
         self.accept_resize.grid_forget()
 
@@ -130,7 +136,22 @@ class MainGUI(Tk):
         self.change_image_button['state'] = DISABLED
         self.open_image_button['state'] = DISABLED
 
-        self.accept_resize.grid(row=0, column=0,
-                                pady=3, padx=3, sticky='w' + 'e' + 'n' + 's')
+        self.configuration_message.grid(row=0, column=0,
+                                        padx=5, pady=3, ipadx=10)
+        self.accept_resize.grid(row=1, column=0,
+                                pady=3, padx=3,
+                                sticky='w' + 'e' + 'n' + 's')
+
+    def accept_resize_changes_event(self):
+        self.resize_logo_button['state'] = NORMAL
+        self.delete_logo_button['state'] = NORMAL
+        self.open_logo_button['state'] = NORMAL
+        self.save_image_button['state'] = NORMAL
+        self.change_image_button['state'] = NORMAL
+        self.open_image_button['state'] = NORMAL
+
+        self.configuration_message.grid_forget()
+        self.accept_resize.grid_forget()
+
 
 

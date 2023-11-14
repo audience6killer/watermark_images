@@ -4,11 +4,10 @@ from PIL import ImageTk, Image
 
 class PhotoImageWrapper:
     def __init__(self, parent, image_path: str, is_logo: bool):
-        super().__init__()
         self.parent = parent
         self.image_id = None
         self.image_tk = None
-        # self.image_coords = ()
+        self.scaled_image = None
         self.original_image = Image.open(image_path)
 
         # Calculate ratio to fit image in canvas
@@ -52,12 +51,21 @@ class PhotoImageWrapper:
                 new_height = canvas_height
                 new_width = canvas_height * aspect_ratio
 
-            scaled_image = self.original_image.resize((int(new_width), int(new_height)))
+            self.scaled_image = self.original_image.resize((int(new_width), int(new_height)))
 
-            self.image_tk = ImageTk.PhotoImage(scaled_image)
+            self.image_tk = ImageTk.PhotoImage(self.scaled_image)
             self.image_id = self.parent.create_image((canvas_width - new_width) / 2,
                                                      (canvas_height - new_height) / 2,
                                                      anchor=tk.NW,
                                                      image=self.image_tk)
+
+    def resize_image(self, delta):
+        if self.scaled_image.width > 100:
+            new_size = (self.scaled_image.width+delta, self.scaled_image.height+delta)
+            self.scaled_image = self.original_image.resize(new_size, Image.LANCZOS)
+            self.image_tk = ImageTk.PhotoImage(self.scaled_image)
+            self.parent.itemconfig(self.image_id, image=self.image_tk)
+
+
 
 
